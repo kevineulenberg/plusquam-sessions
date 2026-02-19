@@ -5,9 +5,24 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Guard: fail fast with a clear message if env vars are missing
+    const envCheck = {
+        SMTP_HOST: !!process.env.SMTP_HOST,
+        SMTP_PORT: !!process.env.SMTP_PORT,
+        SMTP_USER: !!process.env.SMTP_USER,
+        SMTP_PASS: !!process.env.SMTP_PASS,
+        SMTP_FROM: !!process.env.SMTP_FROM,
+        SMTP_TO: !!process.env.SMTP_TO,
+    };
+    console.log('ENV check:', JSON.stringify(envCheck));
+
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.error('Missing SMTP environment variables:', envCheck);
+        return res.status(500).json({ error: 'Server configuration missing.', envCheck });
+    }
+
     const { name, talkTitle, coreMessage, format, preferredMonth, contact } = req.body;
 
-    // Validate required fields
     if (!name || !talkTitle || !coreMessage || !format || !contact) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
@@ -15,11 +30,17 @@ export default async function handler(req, res) {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true', // true for port 465
+        secure: false,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
+        tls: {
+            rejectUnauthorized: false,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
     });
 
     const mailHtml = `
@@ -39,16 +60,23 @@ export default async function handler(req, res) {
   `;
 
     try {
-        await transporter.sendMail({
+        console.log('Attempting SMTP connection to:', process.env.SMTP_HOST, ':', process.env.SMTP_PORT);
+
+        const info = await transporter.sendMail({
             from: `"Plusquam Sessions" <${process.env.SMTP_FROM}>`,
             to: process.env.SMTP_TO,
+            replyTo: contact.includes('@') ? contact : undefined,
             subject: `🎤 New Talk Submission: "${talkTitle}" by ${name}`,
             html: mailHtml,
         });
 
+        console.log('Mail sent successfully:', info.messageId);
         return res.status(200).json({ success: true });
     } catch (error) {
-        console.error('SMTP error:', error);
-        return res.status(500).json({ error: 'Failed to send email. Please try again.' });
+        const message = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : '';
+        console.error('SMTP Error:', message);
+        console.error('SMTP Stack:', stack);
+        return res.status(500).json({ error: message });
     }
 }
