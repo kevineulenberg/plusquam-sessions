@@ -82,83 +82,100 @@ const FRAG = `
 `;
 
 function compileShader(gl, type, src) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, src);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
-    return shader;
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, src);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
+    return null;
+  }
+  return shader;
 }
 
 export default function WebGLBackground() {
-    const canvasRef = useRef(null);
+  const canvasRef = useRef(null);
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
-        if (!gl) return;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+    if (!gl) return;
 
-        // Compile & link
-        const vert = compileShader(gl, gl.VERTEX_SHADER, VERT);
-        const frag = compileShader(gl, gl.FRAGMENT_SHADER, FRAG);
-        const prog = gl.createProgram();
-        gl.attachShader(prog, vert);
-        gl.attachShader(prog, frag);
-        gl.linkProgram(prog);
-        gl.useProgram(prog);
+    // Compile & link
+    const vert = compileShader(gl, gl.VERTEX_SHADER, VERT);
+    const frag = compileShader(gl, gl.FRAGMENT_SHADER, FRAG);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vert);
+    gl.attachShader(prog, frag);
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
 
-        // Full-screen quad
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-        const loc = gl.getAttribLocation(prog, 'a_position');
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    // Full-screen quad
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'a_position');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-        const uTime = gl.getUniformLocation(prog, 'u_time');
-        const uRes = gl.getUniformLocation(prog, 'u_resolution');
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes = gl.getUniformLocation(prog, 'u_resolution');
 
-        // Resize handler — render at 0.5× for performance, CSS scales it up
-        const resize = () => {
-            canvas.width = Math.floor(window.innerWidth * 0.5);
-            canvas.height = Math.floor(window.innerHeight * 0.5);
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        };
-        resize();
-        window.addEventListener('resize', resize);
+    // Resize handler — render at 0.5× for performance, CSS scales it up
+    const resize = () => {
+      canvas.width = Math.floor(window.innerWidth * 0.5);
+      canvas.height = Math.floor(window.innerHeight * 0.5);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    };
+    resize();
+    window.addEventListener('resize', resize);
 
-        let rafId;
-        const start = performance.now();
-        const render = () => {
-            gl.uniform1f(uTime, (performance.now() - start) / 1000);
-            gl.uniform2f(uRes, canvas.width, canvas.height);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            rafId = requestAnimationFrame(render);
-        };
-        render();
+    let rafId;
+    let isVisible = true;
+    const start = performance.now();
 
-        return () => {
-            cancelAnimationFrame(rafId);
-            window.removeEventListener('resize', resize);
-            gl.deleteProgram(prog);
-        };
-    }, []);
+    const render = () => {
+      if (!isVisible) return;
+      gl.uniform1f(uTime, (performance.now() - start) / 1000);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      rafId = requestAnimationFrame(render);
+    };
+    render();
 
-    return (
-        <canvas
-            ref={canvasRef}
-            style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                display: 'block',
-                imageRendering: 'auto',
-                opacity: 0.7,
-            }}
-        />
+    // Pause when hero scrolls out of viewport
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+        if (isVisible) {
+          cancelAnimationFrame(rafId);
+          render();
+        }
+      },
+      { threshold: 0 }
     );
+    observer.observe(canvas);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener('resize', resize);
+      gl.deleteProgram(prog);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        imageRendering: 'auto',
+        opacity: 0.7,
+      }}
+    />
+  );
 }

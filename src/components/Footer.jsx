@@ -15,7 +15,14 @@ const Footer = () => {
                         Back to top
                     </button>
                     <span className="text-white/20">•</span>
-                    <button className="text-white/50 hover:text-white transition-colors">Contact Organizers</button>
+                    <a
+                        href="https://plusquam.studio"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/50 hover:text-white transition-colors"
+                    >
+                        See our network
+                    </a>
                 </div>
 
                 <div className="mt-16 text-white/20 text-sm">
