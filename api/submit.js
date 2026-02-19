@@ -5,7 +5,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Guard: fail fast with a clear message if env vars are missing
+    // Guard: fail fast if SMTP env vars are missing
     const envCheck = {
         SMTP_HOST: !!process.env.SMTP_HOST,
         SMTP_PORT: !!process.env.SMTP_PORT,
@@ -13,6 +13,7 @@ export default async function handler(req, res) {
         SMTP_PASS: !!process.env.SMTP_PASS,
         SMTP_FROM: !!process.env.SMTP_FROM,
         SMTP_TO: !!process.env.SMTP_TO,
+        AIRTABLE_TOKEN: !!process.env.AIRTABLE_TOKEN,
     };
     console.log('ENV check:', JSON.stringify(envCheck));
 
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
 
+    // ─── 1. SMTP ──────────────────────────────────────────────────────────────
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
@@ -35,9 +37,7 @@ export default async function handler(req, res) {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        tls: {
-            rejectUnauthorized: false,
-        },
+        tls: { rejectUnauthorized: false },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 15000,
@@ -61,7 +61,6 @@ export default async function handler(req, res) {
 
     try {
         console.log('Attempting SMTP connection to:', process.env.SMTP_HOST, ':', process.env.SMTP_PORT);
-
         const info = await transporter.sendMail({
             from: `"Plusquam Sessions" <${process.env.SMTP_FROM}>`,
             to: process.env.SMTP_TO,
@@ -69,14 +68,52 @@ export default async function handler(req, res) {
             subject: `🎤 New Talk Submission: "${talkTitle}" by ${name}`,
             html: mailHtml,
         });
-
-        console.log('Mail sent successfully:', info.messageId);
-        return res.status(200).json({ success: true });
+        console.log('Mail sent:', info.messageId);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        const stack = error instanceof Error ? error.stack : '';
-        console.error('SMTP Error:', message);
-        console.error('SMTP Stack:', stack);
-        return res.status(500).json({ error: message });
+        console.error('SMTP Error:', message, error instanceof Error ? error.stack : '');
+        // Don't return here — still try Airtable even if SMTP fails
     }
+
+    // ─── 2. Airtable ─────────────────────────────────────────────────────────
+    if (process.env.AIRTABLE_TOKEN) {
+        try {
+            const airtableRes = await fetch(
+                'https://api.airtable.com/v0/appx2xJjxS6eNB52m/Talk%20Submissions',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        records: [{
+                            fields: {
+                                'Your Name': name,
+                                'Talk Title': talkTitle,
+                                'Core Message': coreMessage,
+                                'Format': format,
+                                ...(preferredMonth ? { 'Preferred Month': preferredMonth } : {}),
+                                'Contact Method': contact,
+                            },
+                        }],
+                    }),
+                }
+            );
+
+            if (!airtableRes.ok) {
+                const err = await airtableRes.text();
+                console.error('Airtable error:', airtableRes.status, err);
+            } else {
+                const data = await airtableRes.json();
+                console.log('Airtable record created:', data.records?.[0]?.id);
+            }
+        } catch (err) {
+            console.error('Airtable fetch error:', err instanceof Error ? err.message : err);
+        }
+    } else {
+        console.warn('AIRTABLE_TOKEN not set — skipping Airtable.');
+    }
+
+    return res.status(200).json({ success: true });
 }

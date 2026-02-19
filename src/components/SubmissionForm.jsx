@@ -6,6 +6,13 @@ const inputClass =
     'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-plusquam-purple/50 transition-colors disabled:opacity-40';
 const selectClass = `${inputClass} appearance-none`;
 
+// Matches Airtable Single Select options exactly
+const FORMAT_OPTIONS = [
+    'Lightning Talk (10m)',
+    'Deep Dive (20m)',
+    'Fireside (Panel)',
+];
+
 const SubmissionForm = () => {
     const [status, setStatus] = useState('idle'); // idle | loading | success | error
     const [errorMsg, setErrorMsg] = useState('');
@@ -13,19 +20,17 @@ const SubmissionForm = () => {
         name: '',
         talkTitle: '',
         coreMessage: '',
-        format: 'Lightning Talk (10m)',
+        format: FORMAT_OPTIONS[0],
         preferredMonth: '',
         contact: '',
     });
 
+    // "February 2026" format — matches Airtable Single Select values exactly
     const months = useMemo(() => {
         const now = new Date();
         return Array.from({ length: 6 }, (_, i) => {
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-            return {
-                value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-                label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-            };
+            return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         });
     }, []);
 
@@ -140,9 +145,9 @@ const SubmissionForm = () => {
                                             onChange={set('format')}
                                             className={selectClass}
                                         >
-                                            <option className="bg-background">Lightning Talk (10m)</option>
-                                            <option className="bg-background">Deep Dive (20m)</option>
-                                            <option className="bg-background">Fireside (Panel)</option>
+                                            {FORMAT_OPTIONS.map((opt) => (
+                                                <option key={opt} value={opt} className="bg-background">{opt}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="space-y-2">
@@ -155,7 +160,7 @@ const SubmissionForm = () => {
                                         >
                                             <option value="" className="bg-background">No preference</option>
                                             {months.map((m) => (
-                                                <option key={m.value} value={m.value} className="bg-background">{m.label}</option>
+                                                <option key={m} value={m} className="bg-background">{m}</option>
                                             ))}
                                         </select>
                                     </div>
