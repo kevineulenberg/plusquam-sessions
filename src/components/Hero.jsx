@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
+import WebGLBackground from './WebGLBackground';
 
 const Hero = () => {
     return (
         <section className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden pt-20">
-            {/* Background Blur Element */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-plusquam-purple/20 blur-[120px] rounded-full pointer-events-none animate-pulse-slow" />
+            <WebGLBackground />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -14,7 +14,19 @@ const Hero = () => {
             >
                 <h1 className="text-6xl md:text-8xl font-display font-bold tracking-tight mb-8 leading-[1.1]">
                     Your Stage. Your Story. <br />
-                    <span className="text-plusquam-purple text-glow">Plusquam Sessions.</span>
+                    <motion.span
+                        className="text-plusquam-purple"
+                        animate={{
+                            textShadow: [
+                                "0 0 20px rgba(168, 85, 247, 0.3)",
+                                "0 0 50px rgba(168, 85, 247, 0.8)",
+                                "0 0 20px rgba(168, 85, 247, 0.3)",
+                            ],
+                        }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                        plusquam Sessions.
+                    </motion.span>
                 </h1>
 
                 <p className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto mb-12">

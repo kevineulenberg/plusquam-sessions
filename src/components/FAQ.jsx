@@ -1,5 +1,3 @@
-import { motion } from 'framer-motion';
-
 const FAQ = () => {
     const faqs = [
         { q: "Who can speak at a Session?", a: "Every Plusquam member is welcome—whether you're a first-time speaker or a seasoned founder." },
@@ -8,22 +6,18 @@ const FAQ = () => {
     ];
 
     return (
-        <section className="py-24 px-4 bg-white/2">
+        <section className="py-24 px-4 bg-white/[0.02]">
             <div className="max-w-3xl mx-auto">
                 <h2 className="text-4xl font-display font-bold mb-12 text-center">Frequently Asked</h2>
                 <div className="space-y-4">
                     {faqs.map((faq, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            viewport={{ once: true }}
                             className="glass-card p-6"
                         >
                             <h3 className="font-bold mb-2 text-plusquam-purple">{faq.q}</h3>
                             <p className="text-white/50">{faq.a}</p>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>

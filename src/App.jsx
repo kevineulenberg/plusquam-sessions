@@ -9,9 +9,8 @@ import Footer from './components/Footer';
 function App() {
   return (
     <div className="relative min-h-screen">
-      {/* Background Decor */}
-      <div className="fixed inset-0 bg-grid-white pointer-events-none" />
-      <div className="fixed inset-0 bg-radial-gradient pointer-events-none" />
+      {/* Grid overlay */}
+      <div className="fixed inset-0 bg-grid-white pointer-events-none z-[1]" />
 
       <main className="relative z-10">
         <Hero />

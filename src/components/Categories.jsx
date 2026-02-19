@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Rocket, Box, Sparkles, Brain, Users } from 'lucide-react';
 
 const Categories = () => {
@@ -20,19 +19,14 @@ const Categories = () => {
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {categories.map((cat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            whileHover={{ y: -5 }}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.1 }}
-                            viewport={{ once: true }}
-                            className="glass-card p-8 group hover:bg-white/10 transition-colors"
+                            className="glass-card p-8 group hover:bg-white/10 hover:-translate-y-1 transition-all duration-300"
                         >
                             <cat.icon className="w-10 h-10 text-plusquam-purple mb-6 group-hover:scale-110 transition-transform" />
                             <h3 className="text-xl font-bold mb-3">{cat.title}</h3>
                             <p className="text-white/50">{cat.desc}</p>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>
